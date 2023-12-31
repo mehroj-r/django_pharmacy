@@ -216,7 +216,7 @@ class SaleDetailView(APIView):
 
     def get_sale_object(self, sale_id):
         try:
-            return Sale.objects.get(sale_id=sale_id)
+            return Sale.objects.select_related().get(sale_id=sale_id)
         except Sale.DoesNotExist:
             return None
 

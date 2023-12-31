@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     'django_extensions',
     'rest_framework',
     'pharmacy_app',
+    "debug_toolbar",
     'silk',
     'api',
 ]
@@ -54,6 +55,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'pharmacy_app.middleware.CurrentUserMiddleware',
+    "debug_toolbar.middleware.DebugToolbarMiddleware",
 ]
 
 ROOT_URLCONF = 'django_pharmacy.urls'
@@ -145,3 +147,7 @@ REST_FRAMEWORK = {
 }
 
 AUTH_USER_MODEL = 'pharmacy_app.Staff'
+
+INTERNAL_IPS = [
+    "127.0.0.1",
+]
