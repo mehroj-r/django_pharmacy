@@ -9,6 +9,7 @@ class Staff(models.Model):
         CASHIER = 1
         WAREHOUSE = 2
 
+    user = models.OneToOneField(User, on_delete=models.CASCADE, null=True)
     name = models.CharField(max_length=120)
     guid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     role = models.IntegerField(choices=StaffRoleChoices.choices, default=StaffRoleChoices.ADMIN)
