@@ -1,12 +1,15 @@
+from pprint import pprint
+
+from django.db import connection
 from django.db.migrations import serializer
 from rest_framework import generics, status
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from pharmacy_app.models import Staff, Product, Category, Uom, WarehouseProduct, Sale
+from pharmacy_app.models import Staff, Product, Category, Uom, WarehouseProduct, Sale, SaleProduct
 from pharmacy_app.serializers import StaffSerializer, ProductSerializer, CategorySerializer, UomSerializer, \
-    WarehouseProductSerializer, SaleSerializer
+    WarehouseProductSerializer, SaleSerializer, SaleProductSerializer
 from pharmacy_app.permissions import IsOwnerOrAdmin, IsWarehouseOrAdmin
 
 
@@ -409,7 +412,7 @@ class SaleDetailView(APIView):
 
     def get_sale_object(self, sale_id):
         try:
-            return Sale.objects.get(id=sale_id)
+            return Sale.objects.get(sale_id=sale_id)
         except Sale.DoesNotExist:
             return None
 
@@ -440,3 +443,27 @@ class SaleDetailView(APIView):
             return Response(serializer.data, status=status.HTTP_200_OK)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class SaleProductView(APIView):
+
+    permission_classes = [IsAuthenticated, IsAdminUser]
+
+    def get(self, *args, **kwargs):
+
+        saleproduct = SaleProduct.objects.filter(sale_id=self.kwargs['sale_id'])
+        serializer = SaleProductSerializer(saleproduct, many=True)
+
+        return Response(serializer.data,status=status.HTTP_200_OK)
+
+class ProductSaleView(APIView):
+
+    permission_classes = [IsAuthenticated, IsAdminUser]
+
+    def get(self, *args, **kwargs):
+
+        saleproduct = SaleProduct.objects.filter(product_id=self.kwargs['product_id'])
+        serializer = SaleProductSerializer(saleproduct, many=True)
+
+        return Response(serializer.data,status=status.HTTP_200_OK)
+
+

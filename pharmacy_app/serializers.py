@@ -1,4 +1,4 @@
-from pharmacy_app.models import Staff, Product, Category, Uom, WarehouseProduct, Sale
+from pharmacy_app.models import Staff, Product, Category, Uom, WarehouseProduct, Sale, SaleProduct
 from rest_framework import serializers
 
 
@@ -49,4 +49,9 @@ class WarehouseProductSerializer(serializers.ModelSerializer):
 class SaleSerializer(serializers.ModelSerializer):
     class Meta:
         model = Sale
+        fields = '__all__'
+
+class SaleProductSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SaleProduct
         fields = '__all__'
