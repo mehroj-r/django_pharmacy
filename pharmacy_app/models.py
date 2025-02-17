@@ -102,6 +102,17 @@ class SaleProduct(models.Model):
     unitPrice = models.DecimalField(decimal_places=2, max_digits=20)
     status = models.CharField(choices=SaleProductStatusChoices.choices)
 
+    def save(self, *args, **kwargs):
+
+        if self.pk:
+            old_price = self.__class__.objects.get(pk=self.pk).unitPrice
+            new_price = self.unitPrice
+
+            if old_price != new_price:
+                ProductPriceHistory.objects.create(product=self.product, oldPrice=old_price, newPrice=new_price, recorder=self.sale.recorder)
+
+        super().save(*args, **kwargs)
+
 
 class ProductPriceHistory(models.Model):
 

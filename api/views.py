@@ -7,20 +7,22 @@ from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from pharmacy_app.models import Staff, Product, Category, Uom, WarehouseProduct, Sale, SaleProduct
+from pharmacy_app.models import Staff, Product, Category, Uom, WarehouseProduct, Sale, SaleProduct, ProductPriceHistory, \
+    BackupWarehouseProduct, UomGroup
 from pharmacy_app.serializers import StaffSerializer, ProductSerializer, CategorySerializer, UomSerializer, \
-    WarehouseProductSerializer, SaleSerializer, SaleProductSerializer
+    WarehouseProductSerializer, SaleSerializer, SaleProductSerializer, ProductPriceHistorySerializer, \
+    BackupWarehouseProductSerializer, UomGroupSerializer
 from pharmacy_app.permissions import IsOwnerOrAdmin, IsWarehouseOrAdmin
 
 
-class StaffRegister(APIView):
+class StaffRegister(generics.CreateAPIView):
     """Handles registering new users"""
 
     permission_classes = [IsAuthenticated, IsAdminUser]
     serializer_class = StaffSerializer
 
     # Register a new staff
-    def post(self, request):
+    def post(self, request, *args, **kwargs):
 
         serializer = StaffSerializer(data=request.data)
 
@@ -90,12 +92,13 @@ class StaffDetailView(APIView):
 
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-class ProductCreate(APIView):
+class ProductCreate(generics.CreateAPIView):
     """Handles creating new products"""
 
     permission_classes = [IsAuthenticated, IsWarehouseOrAdmin]
+    serializer_class = ProductSerializer
 
-    def post(self, request):
+    def post(self, request, *args, **kwargs):
 
         serializer = ProductSerializer(data=request.data)
 
@@ -166,12 +169,13 @@ class ProductDetailView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-class CategoryCreate(APIView):
+class CategoryCreate(generics.CreateAPIView):
     """Handles creating new categories"""
 
     permission_classes = [IsAuthenticated, IsWarehouseOrAdmin]
+    serializer_class = CategorySerializer
 
-    def post(self, request):
+    def post(self, request, *args, **kwargs):
         serializer = CategorySerializer(data=request.data)
 
         if serializer.is_valid():
@@ -239,12 +243,13 @@ class CategoryDetailView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-class UomCreate(APIView):
+class UomCreate(generics.CreateAPIView):
     """Handles creating new UOMs"""
 
     permission_classes = [IsAuthenticated, IsWarehouseOrAdmin]
+    serializer_class = UomSerializer
 
-    def post(self, request):
+    def post(self, request, *args, **kwargs):
         serializer = UomSerializer(data=request.data)
 
         if serializer.is_valid():
@@ -308,12 +313,13 @@ class UomDetailView(APIView):
         uom.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-class WarehouseProductCreate(APIView):
+class WarehouseProductCreate(generics.CreateAPIView):
     """Handles creating new warehouse products"""
 
     permission_classes = [IsAuthenticated, IsWarehouseOrAdmin]
+    serializer_class = WarehouseProductSerializer
 
-    def post(self, request):
+    def post(self, request, *args, **kwargs):
         serializer = WarehouseProductSerializer(data=request.data)
 
         if serializer.is_valid():
@@ -382,12 +388,13 @@ class WarehouseProductDetailView(APIView):
 
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-class SaleCreate(APIView):
+class SaleCreate(generics.CreateAPIView):
     """Handles creating new sales"""
 
     permission_classes = [IsAuthenticated, IsWarehouseOrAdmin]
+    serializer_class = SaleSerializer
 
-    def post(self, request):
+    def post(self, request, *args, **kwargs):
         serializer = SaleSerializer(data=request.data)
 
         if serializer.is_valid():
@@ -444,9 +451,27 @@ class SaleDetailView(APIView):
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-class SaleProductView(APIView):
+class CreateSaleProduct(generics.CreateAPIView):
+    """Creates SaleProduct"""
 
-    permission_classes = [IsAuthenticated, IsAdminUser]
+    permission_classes = [IsAuthenticated, IsWarehouseOrAdmin]
+    serializer_class = SaleProductSerializer
+
+    def post(self, request, *args, **kwargs):
+
+        serializer = SaleProductSerializer(data=request.data)
+
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class SaleProductView(APIView):
+    """Retrieves SaleProducts by sale_id"""
+
+    permission_classes = [IsAuthenticated]
 
     def get(self, *args, **kwargs):
 
@@ -456,8 +481,9 @@ class SaleProductView(APIView):
         return Response(serializer.data,status=status.HTTP_200_OK)
 
 class ProductSaleView(APIView):
+    """Retrieves SaleProducts by product_id"""
 
-    permission_classes = [IsAuthenticated, IsAdminUser]
+    permission_classes = [IsAuthenticated]
 
     def get(self, *args, **kwargs):
 
@@ -467,3 +493,310 @@ class ProductSaleView(APIView):
         return Response(serializer.data,status=status.HTTP_200_OK)
 
 
+class ListSaleProducts(generics.ListAPIView):
+    """Lists all the SaleProducts"""
+
+    queryset = SaleProduct.objects.all()
+    serializer_class = SaleProductSerializer
+    permission_classes = [IsAuthenticated]
+
+class SaleProductDetailView(APIView):
+    """Retrieves, updates, deletes singular SaleProduct"""
+
+    permission_classes = [IsAuthenticated, IsWarehouseOrAdmin]
+
+    def get_sale_product_object(self, id):
+
+        try:
+            return SaleProduct.objects.get(id=id)
+        except SaleProduct.DoesNotExist:
+            return None
+
+    # Retrieves a SaleProduct
+    def get(self, request, id):
+
+        sale_product = self.get_sale_product_object(id)
+
+        if not sale_product:
+            return Response({"error": "SaleProduct does not exist"}, status.HTTP_404_NOT_FOUND)
+
+        serializer = SaleProductSerializer(sale_product)
+
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    # Updates a SaleProduct
+    def post(self, request, id):
+
+        sale_product = self.get_sale_product_object(id)
+
+        if not sale_product:
+            return Response({"error": "SaleProduct does not exist"}, status.HTTP_404_NOT_FOUND)
+
+        serializer = SaleProductSerializer(sale_product, data=request.data, many=False)
+
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    # Deletes a SaleProduct
+    def delete(self, request, id):
+
+        sale_product = self.get_sale_product_object(id)
+
+        if not sale_product:
+            return Response({"error": "SaleProduct does not exist"}, status.HTTP_404_NOT_FOUND)
+
+        sale_product.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+class ListProductPriceHistory(generics.ListAPIView):
+    """Retrieves the list oll price changes"""
+
+    queryset = ProductPriceHistory.objects.all()
+    permission_classes = [IsAuthenticated, IsWarehouseOrAdmin]
+    serializer_class = ProductPriceHistorySerializer
+
+
+class ProductPriceHistoryDetailView(APIView):
+    """Retrieves, updates, deletes singular ProductPriceHistory"""
+
+    permission_classes = [IsAuthenticated, IsWarehouseOrAdmin]
+
+    def get_product_price_history_object(self, id):
+
+        try:
+            return ProductPriceHistory.objects.get(id=id)
+        except ProductPriceHistory.DoesNotExist:
+            return None
+
+    # Retrieves a ProductPriceHistory
+    def get(self, request, id):
+
+        product_price_history = self.get_product_price_history_object(id)
+
+        if not product_price_history:
+            return Response({"error": "ProductPriceHistory does not exist"}, status.HTTP_404_NOT_FOUND)
+
+        serializer = ProductPriceHistorySerializer(product_price_history)
+
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    # Updates a ProductPriceHistory
+    def post(self, request, id):
+
+        product_price_history = self.get_product_price_history_object(id)
+
+        if not product_price_history:
+            return Response({"error": "ProductPriceHistory does not exist"}, status.HTTP_404_NOT_FOUND)
+
+        serializer = ProductPriceHistorySerializer(product_price_history, data=request.data, many=False)
+
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    # Deletes a ProductPriceHistory
+    def delete(self, request, id):
+
+        product_price_history = self.get_product_price_history_object(id)
+
+        if not product_price_history:
+            return Response({"error": "ProductPriceHistory does not exist"}, status.HTTP_404_NOT_FOUND)
+
+        product_price_history.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class ProductPriceHistoryByProduct(APIView):
+    """Returns all price-history for a product"""
+
+    permission_classes = [IsAuthenticated, IsWarehouseOrAdmin]
+
+    def get(self, request, product_id):
+
+        product_price_history = ProductPriceHistory.objects.filter(product_id=product_id)
+
+        if not product_price_history:
+            return Response({"error": "ProductPriceHistory does not exist"}, status.HTTP_404_NOT_FOUND)
+
+        serializer = ProductPriceHistorySerializer(product_price_history, many=True)
+
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class ProductPriceHistoryByRecorder(APIView):
+    """Returns all price-history by recorder"""
+
+    permission_classes = [IsAuthenticated, IsWarehouseOrAdmin]
+
+    def get(self, request, recorder_id):
+
+        product_price_history = ProductPriceHistory.objects.filter(recorder_id=recorder_id)
+
+        if not product_price_history:
+            return Response({"error": "ProductPriceHistory does not exist"}, status.HTTP_404_NOT_FOUND)
+
+        serializer = ProductPriceHistorySerializer(product_price_history, many=True)
+
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class ProductPriceHistoryByProductByRecorder(APIView):
+    """Returns all price-history for a product by a recorder"""
+
+    permission_classes = [IsAuthenticated, IsWarehouseOrAdmin]
+
+    def get(self, *args, **kwargs):
+
+        product_id = kwargs.get("product_id")
+        recorder_id = kwargs.get("recorder_id")
+
+        product_price_history = ProductPriceHistory.objects.filter(product_id=product_id, recorder_id=recorder_id)
+
+        if not product_price_history:
+            return Response({"error": "ProductPriceHistory does not exist"}, status.HTTP_404_NOT_FOUND)
+
+        serializer = ProductPriceHistorySerializer(product_price_history, many=True)
+
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class BackupWarehouseProductCreate(APIView):
+    """Handles creating new Backup Warehouse Products"""
+
+    permission_classes = [IsAuthenticated, IsWarehouseOrAdmin]
+    serializer_class = BackupWarehouseProductSerializer
+
+    def post(self, request, *args, **kwargs):
+        serializer = BackupWarehouseProductSerializer(data=request.data)
+
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class ListBackupWarehouseProducts(generics.ListAPIView):
+    """Handles listing all Backup Warehouse Products"""
+
+    queryset = BackupWarehouseProduct.objects.all()
+    serializer_class = BackupWarehouseProductSerializer
+    permission_classes = [IsAuthenticated, IsWarehouseOrAdmin]
+
+
+class BackupWarehouseProductDetailView(APIView):
+    """Handles retrieving, updating, and deleting a Backup Warehouse Product"""
+
+    permission_classes = [IsAuthenticated, IsWarehouseOrAdmin]
+
+    def get_product_object(self, product_id):
+        try:
+            return BackupWarehouseProduct.objects.get(id=product_id)
+        except BackupWarehouseProduct.DoesNotExist:
+            return None
+
+    # Retrieve a product
+    def get(self, request, product_id):
+        product = self.get_product_object(product_id)
+
+        if not product:
+            return Response({"error": "Product does not exist"}, status=status.HTTP_404_NOT_FOUND)
+
+        serializer = BackupWarehouseProductSerializer(product, many=False)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    # Update a product
+    def post(self, request, product_id):
+        product = self.get_product_object(product_id)
+
+        if not product:
+            return Response({"error": "Product does not exist"}, status=status.HTTP_404_NOT_FOUND)
+
+        serializer = BackupWarehouseProductSerializer(product, data=request.data, many=False)
+
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    # Delete a product
+    def delete(self, request, product_id):
+        product = self.get_product_object(product_id)
+
+        if not product:
+            return Response({"error": "Product does not exist"}, status=status.HTTP_404_NOT_FOUND)
+
+        product.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+class UomGroupCreate(generics.CreateAPIView):
+    """Handles creating new UOM Groups"""
+
+    permission_classes = [IsAuthenticated, IsWarehouseOrAdmin]
+    serializer_class = UomGroupSerializer
+
+    def post(self, request, *args, **kwargs):
+        serializer = UomGroupSerializer(data=request.data)
+
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class ListUomGroups(generics.ListAPIView):
+    """Handles listing all UOM Groups"""
+
+    queryset = UomGroup.objects.all()
+    serializer_class = UomGroupSerializer
+    permission_classes = [IsAuthenticated, IsWarehouseOrAdmin]
+
+
+class UomGroupDetailView(APIView):
+    """Handles retrieving, updating, and deleting a UOM Group"""
+
+    permission_classes = [IsAuthenticated, IsWarehouseOrAdmin]
+
+    def get_uom_group_object(self, id):
+        try:
+            return UomGroup.objects.get(id=id)
+        except UomGroup.DoesNotExist:
+            return None
+
+    # Retrieve a UOM Group
+    def get(self, request, id):
+        uom_group = self.get_uom_group_object(id)
+
+        if not uom_group:
+            return Response({"error": "UOM Group does not exist"}, status=status.HTTP_404_NOT_FOUND)
+
+        serializer = UomGroupSerializer(uom_group, many=False)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    # Update a UOM Group
+    def post(self, request, id):
+        uom_group = self.get_uom_group_object(id)
+
+        if not uom_group:
+            return Response({"error": "UOM Group does not exist"}, status=status.HTTP_404_NOT_FOUND)
+
+        serializer = UomGroupSerializer(uom_group, data=request.data, many=False)
+
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    # Delete a UOM Group
+    def delete(self, request, id):
+        uom_group = self.get_uom_group_object(id)
+
+        if not uom_group:
+            return Response({"error": "UOM Group does not exist"}, status=status.HTTP_404_NOT_FOUND)
+
+        uom_group.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
