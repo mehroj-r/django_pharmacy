@@ -2,6 +2,9 @@ from django.contrib import auth, messages
 from django.contrib.auth.models import User
 from django.shortcuts import render, redirect
 
+from pharmacy_app.models import Staff
+
+
 def sign_in(request):
     if request.POST == {}:
 
@@ -15,18 +18,14 @@ def sign_in(request):
 
     if username == "" or password == "":
         messages.error(request, 'Please fill all the fields')
-    elif User.objects.filter(username=username).exists():
+    elif Staff.objects.filter(username=username).exists():
 
-        user = User.objects.get(username=username)
+        user = Staff.objects.get(username=username)
 
         if user.check_password(password):
 
-            if hasattr(user, 'staff'):
-                auth.login(request, user)
-                messages.success(request, 'You are logged in')
-            else:
-                messages.error(request, "You can't login as a staff")
-                return redirect('sign-in')
+            auth.login(request, user)
+            messages.success(request, 'You are logged in')
 
             return redirect('home')
         else:

@@ -1,28 +1,37 @@
 import uuid
-from django.contrib.auth.models import User
+from django.contrib.auth.models import AbstractUser, Permission, Group
 from django.db import models
 
-class Staff(models.Model):
+class Staff(AbstractUser):
 
-    class StaffRoleChoices(models.IntegerChoices):
-        ADMIN = 0
-        CASHIER = 1
-        WAREHOUSE = 2
+    class StaffRoleChoices(models.TextChoices):
+        ADMIN = "Admin"
+        CASHIER = "Cashier"
+        WAREHOUSE = "Warehouse"
 
-    user = models.OneToOneField(User, on_delete=models.CASCADE, null=True)
-    name = models.CharField(max_length=120)
     guid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
-    role = models.IntegerField(choices=StaffRoleChoices.choices, default=StaffRoleChoices.ADMIN)
+    role = models.CharField(choices=StaffRoleChoices.choices, default=StaffRoleChoices.ADMIN)
+
+    groups = models.ManyToManyField(Group, related_name="staff_users", blank=True)
+    user_permissions = models.ManyToManyField(Permission, related_name="staff_user_permissions", blank=True)
+
+    def save(self, *args, **kwargs):
+
+        isAdmin = self.role == self.StaffRoleChoices.ADMIN  # Give elevated permission for 'Admin' role
+        self.is_staff = isAdmin
+        self.is_superuser = isAdmin
+
+        super().save(*args, **kwargs)
 
     def __str__(self):
-        return self.name
+        return self.first_name
 
 
 class Sale(models.Model):
 
-    class SaleStatusChoices(models.IntegerChoices):
-        IN_PROGRESS = 0
-        CLOSED = 1
+    class SaleStatusChoices(models.TextChoices):
+        IN_PROGRESS = "InProgress"
+        CLOSED = "Closed"
 
     sale_id = models.AutoField(primary_key=True)
     code = models.CharField(max_length=120)
@@ -36,9 +45,9 @@ class Sale(models.Model):
 
 class SalePayment(models.Model):
 
-    class PaymentTypeChoices(models.IntegerChoices):
-        CARD = 0
-        CASH = 1
+    class PaymentTypeChoices(models.TextChoices):
+        CARD = "Card"
+        CASH = "Cash"
 
     sale = models.ForeignKey(Sale, on_delete=models.SET_NULL, null=True)
     code = models.CharField(max_length=120)
@@ -83,9 +92,9 @@ class Product(models.Model):
 
 class SaleProduct(models.Model):
 
-    class SaleProductStatusChoices(models.IntegerChoices):
-        SOLD = 0
-        RETURNED = 1
+    class SaleProductStatusChoices(models.TextChoices):
+        SOLD = "Sold"
+        RETURNED = "Returned"
 
     sale = models.ForeignKey(Sale, on_delete=models.SET_NULL, null=True)
     product = models.ForeignKey(Product, on_delete=models.SET_NULL, null=True)
