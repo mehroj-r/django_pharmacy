@@ -1,5 +1,4 @@
-from django.contrib.auth.models import User
-from pharmacy_app.models import Staff
+from pharmacy_app.models import Staff, Product, Category, Uom, WarehouseProduct, Sale
 from rest_framework import serializers
 
 
@@ -25,7 +24,29 @@ class StaffSerializer(serializers.ModelSerializer):
         instance.save()
         return instance
 
-class UserSerializer(serializers.ModelSerializer):
+class ProductSerializer(serializers.ModelSerializer):
     class Meta:
-        model = User
+        model = Product
+        fields= '__all__'
+
+class CategorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Category
+        fields = '__all__'
+
+
+class UomSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Uom
+        fields = '__all__'
+
+
+class WarehouseProductSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = WarehouseProduct
+        fields = '__all__'
+
+class SaleSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Sale
         fields = '__all__'

@@ -37,7 +37,7 @@ class Sale(models.Model):
     code = models.CharField(max_length=120)
     recorder = models.ForeignKey(Staff, on_delete=models.SET_NULL, null=True)
     totalAmount = models.DecimalField(max_digits=10, decimal_places=2)
-    status = models.IntegerField(choices=SaleStatusChoices.choices, default=SaleStatusChoices.IN_PROGRESS)
+    status = models.CharField(choices=SaleStatusChoices.choices, default=SaleStatusChoices.IN_PROGRESS)
 
     def __str__(self):
         return self.code
@@ -52,7 +52,7 @@ class SalePayment(models.Model):
     sale = models.ForeignKey(Sale, on_delete=models.SET_NULL, null=True)
     code = models.CharField(max_length=120)
     amount = models.DecimalField(decimal_places=2, max_digits=20)
-    payment_type = models.IntegerField(choices=PaymentTypeChoices.choices)
+    payment_type = models.CharField(choices=PaymentTypeChoices.choices)
 
     def __str__(self):
         return self.code
@@ -81,7 +81,7 @@ class Uom(models.Model):
 class Product(models.Model):
 
     title = models.CharField(max_length=120)
-    photo = models.ImageField()
+    photo = models.ImageField(null=True, blank=True)
     uom = models.ForeignKey(Uom, on_delete=models.SET_NULL, null=True)
     recorder = models.ForeignKey(Staff, on_delete=models.SET_NULL, null=True)
     category = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True)
@@ -100,7 +100,7 @@ class SaleProduct(models.Model):
     product = models.ForeignKey(Product, on_delete=models.SET_NULL, null=True)
     quantity = models.DecimalField(decimal_places=2, max_digits=20)
     unitPrice = models.DecimalField(decimal_places=2, max_digits=20)
-    status = models.IntegerField(choices=SaleProductStatusChoices.choices)
+    status = models.CharField(choices=SaleProductStatusChoices.choices)
 
 
 class ProductPriceHistory(models.Model):
