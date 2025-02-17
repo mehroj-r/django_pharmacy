@@ -64,7 +64,7 @@ class StaffDetailView(APIView):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     # Update the staff
-    def post(self, request, staff_id):
+    def put(self, request, staff_id):
 
         staff = self.get_staff_object(staff_id)
 
@@ -139,7 +139,7 @@ class ProductDetailView(APIView):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     # Update a product
-    def post(self, request, product_id):
+    def put(self, request, product_id):
 
         product = self.get_product_object(product_id)
 
@@ -216,7 +216,7 @@ class CategoryDetailView(APIView):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     # Update a category
-    def post(self, request, category_id):
+    def put(self, request, category_id):
 
         category = self.get_category_object(category_id)
 
@@ -289,7 +289,7 @@ class UomDetailView(APIView):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     # Update a UOM
-    def post(self, request, uom_id):
+    def put(self, request, uom_id):
         uom = self.get_uom_object(uom_id)
 
         if not uom:
@@ -361,7 +361,7 @@ class WarehouseProductDetailView(APIView):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     # Update a warehouse product
-    def post(self, request, product_id):
+    def put(self, request, product_id):
 
         warehouse_product = self.get_warehouse_product_object(product_id)
 
@@ -436,7 +436,7 @@ class SaleDetailView(APIView):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     # Update a sale
-    def post(self, request, sale_id):
+    def put(self, request, sale_id):
 
         sale = self.get_sale_object(sale_id)
 
@@ -525,7 +525,7 @@ class SaleProductDetailView(APIView):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     # Updates a SaleProduct
-    def post(self, request, id):
+    def put(self, request, id):
 
         sale_product = self.get_sale_product_object(id)
 
@@ -584,7 +584,7 @@ class ProductPriceHistoryDetailView(APIView):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     # Updates a ProductPriceHistory
-    def post(self, request, id):
+    def put(self, request, id):
 
         product_price_history = self.get_product_price_history_object(id)
 
@@ -707,7 +707,7 @@ class BackupWarehouseProductDetailView(APIView):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     # Update a product
-    def post(self, request, product_id):
+    def put(self, request, product_id):
         product = self.get_product_object(product_id)
 
         if not product:
@@ -777,7 +777,7 @@ class UomGroupDetailView(APIView):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     # Update a UOM Group
-    def post(self, request, id):
+    def put(self, request, id):
         uom_group = self.get_uom_group_object(id)
 
         if not uom_group:
