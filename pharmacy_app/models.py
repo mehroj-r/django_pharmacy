@@ -105,38 +105,6 @@ class SaleProduct(models.Model):
     unitPrice = models.DecimalField(decimal_places=2, max_digits=20)
     status = models.CharField(choices=SaleProductStatusChoices)
 
-    def save(self, *args, **kwargs):
-
-        # Handle Price Change
-        if self.pk:
-            old_price = self.__class__.objects.get(pk=self.pk).unitPrice
-            new_price = self.unitPrice
-
-            if old_price != new_price:
-                # Record Price Change
-                ProductPriceHistory.objects.create(
-                    product=self.product,
-                    oldPrice=old_price,
-                    newPrice=new_price,
-                    recorder=self.sale.recorder
-                )
-
-        # Handle product count in Warehouse
-        new_status = self.status
-        warehouse = self.product.warehouse
-
-        if new_status == SaleProduct.SaleProductStatusChoices.RETURNED:
-            warehouse.quantity += self.quantity # Increment if returned
-        else:
-            warehouse.quantity -= self.quantity # Decrement if sold
-
-            if warehouse.quantity < 0:
-                raise ValidationError("The sale can't be processed. Stock is not enough")
-
-
-        super().save(*args, **kwargs)
-        warehouse.save()
-
 
 class ProductPriceHistory(models.Model):
 
