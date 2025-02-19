@@ -12,7 +12,7 @@ class Staff(AbstractUser):
         WAREHOUSE = "Warehouse"
 
     guid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
-    role = models.CharField(choices=StaffRoleChoices.choices, default=StaffRoleChoices.ADMIN)
+    role = models.CharField(choices=StaffRoleChoices, default=StaffRoleChoices.ADMIN)
 
     groups = models.ManyToManyField(Group, related_name="staff_users", blank=True)
     user_permissions = models.ManyToManyField(Permission, related_name="staff_user_permissions", blank=True)
@@ -40,7 +40,7 @@ class Sale(models.Model):
     code = models.CharField(max_length=120)
     recorder = models.ForeignKey(Staff, on_delete=models.SET_NULL, null=True)
     totalAmount = models.DecimalField(max_digits=10, decimal_places=2)
-    status = models.CharField(choices=SaleStatusChoices.choices, default=SaleStatusChoices.IN_PROGRESS)
+    status = models.CharField(choices=SaleStatusChoices, default=SaleStatusChoices.IN_PROGRESS)
 
     def __str__(self):
         return self.code
@@ -55,7 +55,7 @@ class SalePayment(models.Model):
     sale = models.ForeignKey(Sale, on_delete=models.SET_NULL, null=True)
     code = models.CharField(max_length=120)
     amount = models.DecimalField(decimal_places=2, max_digits=20)
-    payment_type = models.CharField(choices=PaymentTypeChoices.choices)
+    payment_type = models.CharField(choices=PaymentTypeChoices)
 
     def __str__(self):
         return self.code
@@ -103,7 +103,7 @@ class SaleProduct(models.Model):
     product = models.ForeignKey(Product, on_delete=models.SET_NULL, null=True)
     quantity = models.DecimalField(decimal_places=2, max_digits=20)
     unitPrice = models.DecimalField(decimal_places=2, max_digits=20)
-    status = models.CharField(choices=SaleProductStatusChoices.choices)
+    status = models.CharField(choices=SaleProductStatusChoices)
 
     def save(self, *args, **kwargs):
 
