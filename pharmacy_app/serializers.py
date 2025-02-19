@@ -1,5 +1,4 @@
-from pharmacy_app.models import Staff, Product, Category, Uom, WarehouseProduct, Sale, SaleProduct, ProductPriceHistory, \
-    BackupWarehouseProduct, UomGroup
+from pharmacy_app.models import Staff, Product, Category, Uom, WarehouseProduct, Sale, SaleProduct, ProductPriceHistory, BackupWarehouseProduct, UomGroup
 from rest_framework import serializers
 
 

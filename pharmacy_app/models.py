@@ -1,6 +1,8 @@
 import uuid
 from django.contrib.auth.models import AbstractUser, Permission, Group
+from django.core.exceptions import ValidationError
 from django.db import models
+
 
 class Staff(AbstractUser):
 
@@ -17,7 +19,8 @@ class Staff(AbstractUser):
 
     def save(self, *args, **kwargs):
 
-        isAdmin = self.role == self.StaffRoleChoices.ADMIN  # Give elevated permission for 'Admin' role
+        # Give elevated permission for 'Admin' role
+        isAdmin = self.role == self.StaffRoleChoices.ADMIN
         self.is_staff = isAdmin
         self.is_superuser = isAdmin
 
@@ -104,14 +107,35 @@ class SaleProduct(models.Model):
 
     def save(self, *args, **kwargs):
 
+        # Handle Price Change
         if self.pk:
             old_price = self.__class__.objects.get(pk=self.pk).unitPrice
             new_price = self.unitPrice
 
             if old_price != new_price:
-                ProductPriceHistory.objects.create(product=self.product, oldPrice=old_price, newPrice=new_price, recorder=self.sale.recorder)
+                # Record Price Change
+                ProductPriceHistory.objects.create(
+                    product=self.product,
+                    oldPrice=old_price,
+                    newPrice=new_price,
+                    recorder=self.sale.recorder
+                )
+
+        # Handle product count in Warehouse
+        new_status = self.status
+        warehouse = self.product.warehouse
+
+        if new_status == SaleProduct.SaleProductStatusChoices.RETURNED:
+            warehouse.quantity += self.quantity # Increment if returned
+        else:
+            warehouse.quantity -= self.quantity # Decrement if sold
+
+            if warehouse.quantity < 0:
+                raise ValidationError("The sale can't be processed. Stock is not enough")
+
 
         super().save(*args, **kwargs)
+        warehouse.save()
 
 
 class ProductPriceHistory(models.Model):
@@ -131,8 +155,7 @@ class BackupWarehouseProduct(models.Model):
 
 class WarehouseProduct(models.Model):
 
-    product = models.OneToOneField(Product, on_delete=models.SET_NULL, null=True)
+    product = models.OneToOneField(Product, on_delete=models.SET_NULL, null=True, related_name="warehouse")
     quantity = models.DecimalField(decimal_places=2, max_digits=20)
     unitPrice = models.DecimalField(decimal_places=2, max_digits=20)
     recorder = models.ForeignKey(Staff, on_delete=models.SET_NULL, null=True)
-

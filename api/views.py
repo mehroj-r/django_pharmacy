@@ -504,6 +504,7 @@ class SaleProductDetailView(APIView):
     """Retrieves, updates, deletes singular SaleProduct"""
 
     permission_classes = [IsAuthenticated, IsWarehouseOrAdmin]
+    serializer_class = SaleProductSerializer
 
     def get_sale_product_object(self, id):
 
