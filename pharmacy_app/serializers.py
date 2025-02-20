@@ -24,21 +24,59 @@ class StaffSerializer(serializers.ModelSerializer):
         instance.save()
         return instance
 
-class ProductSerializer(serializers.ModelSerializer):
+class StaffShortSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Product
-        fields= '__all__'
+        model = Staff
+        fields = ("username", "role")
 
 class CategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = Category
         fields = '__all__'
 
+class UomShortGroupSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UomGroup
+        fields = ('id','title')
 
-class UomSerializer(serializers.ModelSerializer):
+class UomShortSerializer(serializers.ModelSerializer):
+
+    uomGroup = UomShortGroupSerializer(read_only=True)
+
     class Meta:
         model = Uom
-        fields = '__all__'
+        fields = ('baseQuantity', 'quantity', 'uomGroup')
+
+class ProductSerializer(serializers.ModelSerializer):
+
+    category = CategorySerializer(read_only=True)
+    recorder = StaffShortSerializer(read_only=True)
+    uom = UomShortSerializer(read_only=True)
+
+    class Meta:
+        model = Product
+        fields= ('title', 'photo', 'category', 'recorder', 'uom')
+
+class ProductListSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Product
+        fields= ('id', 'title', 'category', 'recorder')
+
+
+class UomGroupSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UomGroup
+        fields = ('id', 'title')
+
+
+class UomSerializer(serializers.ModelSerializer):
+
+    uomGroup = UomGroupSerializer(read_only=True)
+
+    class Meta:
+        model = Uom
+        fields = ('id', 'baseQuantity', 'quantity', 'uomGroup')
 
 
 class WarehouseProductSerializer(serializers.ModelSerializer):
@@ -66,7 +104,3 @@ class BackupWarehouseProductSerializer(serializers.ModelSerializer):
         model = BackupWarehouseProduct
         fields = '__all__'
 
-class UomGroupSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = UomGroup
-        fields = '__all__'

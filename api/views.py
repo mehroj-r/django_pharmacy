@@ -11,7 +11,7 @@ from pharmacy_app.models import Staff, Product, Category, Uom, WarehouseProduct,
     BackupWarehouseProduct, UomGroup
 from pharmacy_app.serializers import StaffSerializer, ProductSerializer, CategorySerializer, UomSerializer, \
     WarehouseProductSerializer, SaleSerializer, SaleProductSerializer, ProductPriceHistorySerializer, \
-    BackupWarehouseProductSerializer, UomGroupSerializer
+    BackupWarehouseProductSerializer, UomGroupSerializer, ProductListSerializer
 from pharmacy_app.permissions import IsOwnerOrAdmin, IsWarehouseOrAdmin
 
 
@@ -113,7 +113,7 @@ class ListProducts(generics.ListAPIView):
 
     permission_classes = [IsWarehouseOrAdmin]
     queryset = Product.objects.all()
-    serializer_class = ProductSerializer
+    serializer_class = ProductListSerializer
 
 class ProductDetailView(APIView):
     """Handles retrieving, updating, deleting the products"""
@@ -122,7 +122,7 @@ class ProductDetailView(APIView):
 
     def get_product_object(self, product_id):
         try:
-            return Product.objects.get(id=product_id)
+            return Product.objects.select_related('category', 'recorder', 'uom__uomGroup').get(id=product_id)
         except Product.DoesNotExist:
             return None
 

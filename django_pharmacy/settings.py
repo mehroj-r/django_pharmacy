@@ -40,10 +40,12 @@ INSTALLED_APPS = [
     'django_extensions',
     'rest_framework',
     'pharmacy_app',
+    'silk',
     'api',
 ]
 
 MIDDLEWARE = [
+    'silk.middleware.SilkyMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
