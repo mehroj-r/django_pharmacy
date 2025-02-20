@@ -36,26 +36,16 @@ class Sale(models.Model):
         IN_PROGRESS = "InProgress"
         CLOSED = "Closed"
 
+    class PaymentTypeChoices(models.TextChoices):
+        CARD = "Card"
+        CASH = "Cash"
+
     sale_id = models.AutoField(primary_key=True)
     code = models.CharField(max_length=120)
     recorder = models.ForeignKey(Staff, on_delete=models.SET_NULL, null=True)
     totalAmount = models.DecimalField(max_digits=10, decimal_places=2)
     status = models.CharField(choices=SaleStatusChoices, default=SaleStatusChoices.IN_PROGRESS)
-
-    def __str__(self):
-        return self.code
-
-
-class SalePayment(models.Model):
-
-    class PaymentTypeChoices(models.TextChoices):
-        CARD = "Card"
-        CASH = "Cash"
-
-    sale = models.ForeignKey(Sale, on_delete=models.SET_NULL, null=True)
-    code = models.CharField(max_length=120)
-    amount = models.DecimalField(decimal_places=2, max_digits=20)
-    payment_type = models.CharField(choices=PaymentTypeChoices)
+    payment_type = models.CharField(choices=PaymentTypeChoices, default=PaymentTypeChoices.CARD)
 
     def __str__(self):
         return self.code

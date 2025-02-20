@@ -3,7 +3,7 @@ import uuid
 from decimal import Decimal
 from django.core.management.base import BaseCommand
 from pharmacy_app.models import (
-    Staff, Sale, SalePayment, Category, UomGroup, Uom, Product, SaleProduct,
+    Staff, Sale, Category, UomGroup, Uom, Product, SaleProduct,
     ProductPriceHistory, BackupWarehouseProduct, WarehouseProduct
 )
 
@@ -64,17 +64,6 @@ class Command(BaseCommand):
             ) for _ in range(10)
         ]
         self.stdout.write(self.style.SUCCESS("Created sale products."))
-
-        # Create Sale Payments
-        sale_payments = [
-            SalePayment.objects.create(
-                sale=random.choice(sales),
-                code=str(uuid.uuid4())[:8],
-                amount=Decimal(random.randint(50, 500)),
-                payment_type=random.choice([SalePayment.PaymentTypeChoices.CARD, SalePayment.PaymentTypeChoices.CASH])
-            ) for _ in range(5)
-        ]
-        self.stdout.write(self.style.SUCCESS("Created sale payments."))
 
         # Create Warehouse Products
         warehouse_products = [

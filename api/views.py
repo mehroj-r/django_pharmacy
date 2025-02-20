@@ -122,7 +122,9 @@ class ProductDetailView(APIView):
 
     def get_product_object(self, product_id):
         try:
-            return Product.objects.select_related('category', 'recorder', 'uom__uomGroup').get(id=product_id)
+            return Product.objects.select_related(
+                'category', 'recorder', 'uom__uomGroup'
+            ).get(id=product_id)
         except Product.DoesNotExist:
             return None
 
