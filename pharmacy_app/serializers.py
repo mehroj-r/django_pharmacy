@@ -72,8 +72,6 @@ class UomGroupSerializer(serializers.ModelSerializer):
 
 class UomSerializer(serializers.ModelSerializer):
 
-    uomGroup = UomGroupSerializer(read_only=True)
-
     class Meta:
         model = Uom
         fields = ('id', 'baseQuantity', 'quantity', 'uomGroup')

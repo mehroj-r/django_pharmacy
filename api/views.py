@@ -1,41 +1,29 @@
-from pprint import pprint
 
+from pprint import pprint
 from django.db import connection
 from django.db.migrations import serializer
+from django.utils.timezone import override
 from rest_framework import generics, status
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from pharmacy_app.models import Staff, Product, Category, Uom, WarehouseProduct, Sale, SaleProduct, ProductPriceHistory, \
-    BackupWarehouseProduct, UomGroup
-from pharmacy_app.serializers import StaffSerializer, ProductSerializer, CategorySerializer, UomSerializer, \
-    WarehouseProductSerializer, SaleSerializer, SaleProductSerializer, ProductPriceHistorySerializer, \
-    BackupWarehouseProductSerializer, UomGroupSerializer, ProductListSerializer
+from pharmacy_app.models import (
+        Staff, Product, Category, Uom, WarehouseProduct, Sale, SaleProduct, ProductPriceHistory, \
+        BackupWarehouseProduct, UomGroup
+    )
+from pharmacy_app.serializers import (
+        StaffSerializer, ProductSerializer, CategorySerializer, UomSerializer, \
+        WarehouseProductSerializer, SaleSerializer, SaleProductSerializer, ProductPriceHistorySerializer, \
+        BackupWarehouseProductSerializer, UomGroupSerializer, ProductListSerializer
+    )
 from pharmacy_app.permissions import IsOwnerOrAdmin, IsWarehouseOrAdmin
 
 
-class StaffRegister(generics.CreateAPIView):
-    """Handles registering new users"""
-
-    permission_classes = [IsAuthenticated, IsAdminUser]
-    serializer_class = StaffSerializer
-
-    # Register a new staff
-    def post(self, request, *args, **kwargs):
-
-        serializer = StaffSerializer(data=request.data)
-
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-class ListStaffs(generics.ListAPIView):
+class ListCreateStaffs(generics.ListCreateAPIView):
     """Handles retrieving the list of all staffs"""
 
-    permission_classes = [IsAdminUser]
+    permission_classes = [IsAuthenticated, IsAdminUser]
     queryset = Staff.objects.all()
     serializer_class = StaffSerializer
 
@@ -92,28 +80,14 @@ class StaffDetailView(APIView):
 
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-class ProductCreate(generics.CreateAPIView):
-    """Handles creating new products"""
 
-    permission_classes = [IsAuthenticated, IsWarehouseOrAdmin]
-    serializer_class = ProductSerializer
-
-    def post(self, request, *args, **kwargs):
-
-        serializer = ProductSerializer(data=request.data)
-
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-class ListProducts(generics.ListAPIView):
+class ListCreateProducts(generics.ListCreateAPIView):
     """Handles listing all products"""
 
-    permission_classes = [IsWarehouseOrAdmin]
+    permission_classes = [IsAuthenticated, IsWarehouseOrAdmin]
     queryset = Product.objects.all()
     serializer_class = ProductListSerializer
+
 
 class ProductDetailView(APIView):
     """Handles retrieving, updating, deleting the products"""
@@ -148,8 +122,6 @@ class ProductDetailView(APIView):
         if not product:
             return Response({"error": "Product does not exist"}, status.HTTP_404_NOT_FOUND)
 
-        old_price = product.c
-
         serializer = ProductSerializer(product, data=request.data, many=False)
 
         if serializer.is_valid():
@@ -171,23 +143,7 @@ class ProductDetailView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-class CategoryCreate(generics.CreateAPIView):
-    """Handles creating new categories"""
-
-    permission_classes = [IsAuthenticated, IsWarehouseOrAdmin]
-    serializer_class = CategorySerializer
-
-    def post(self, request, *args, **kwargs):
-        serializer = CategorySerializer(data=request.data)
-
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
-class ListCategories(generics.ListAPIView):
+class ListCreateCategories(generics.ListCreateAPIView):
     """Handles listing all categories"""
 
     queryset = Category.objects.all()
@@ -245,23 +201,7 @@ class CategoryDetailView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-class UomCreate(generics.CreateAPIView):
-    """Handles creating new UOMs"""
-
-    permission_classes = [IsAuthenticated, IsWarehouseOrAdmin]
-    serializer_class = UomSerializer
-
-    def post(self, request, *args, **kwargs):
-        serializer = UomSerializer(data=request.data)
-
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
-class ListUoms(generics.ListAPIView):
+class ListCreateUoms(generics.ListCreateAPIView):
     """Handles listing all UOMs"""
 
     queryset = Uom.objects.all()
@@ -315,23 +255,8 @@ class UomDetailView(APIView):
         uom.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-class WarehouseProductCreate(generics.CreateAPIView):
-    """Handles creating new warehouse products"""
 
-    permission_classes = [IsAuthenticated, IsWarehouseOrAdmin]
-    serializer_class = WarehouseProductSerializer
-
-    def post(self, request, *args, **kwargs):
-        serializer = WarehouseProductSerializer(data=request.data)
-
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
-class ListWarehouseProducts(generics.ListAPIView):
+class ListCreateWarehouseProducts(generics.ListCreateAPIView):
     """Handles listing all warehouse products"""
 
     queryset = WarehouseProduct.objects.all()
@@ -390,23 +315,8 @@ class WarehouseProductDetailView(APIView):
 
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-class SaleCreate(generics.CreateAPIView):
-    """Handles creating new sales"""
 
-    permission_classes = [IsAuthenticated, IsWarehouseOrAdmin]
-    serializer_class = SaleSerializer
-
-    def post(self, request, *args, **kwargs):
-        serializer = SaleSerializer(data=request.data)
-
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
-class ListSales(generics.ListAPIView):
+class ListCreateSales(generics.ListCreateAPIView):
     """Handles listing all sales"""
 
     queryset = Sale.objects.all()
@@ -453,22 +363,6 @@ class SaleDetailView(APIView):
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-class CreateSaleProduct(generics.CreateAPIView):
-    """Creates SaleProduct"""
-
-    permission_classes = [IsAuthenticated, IsWarehouseOrAdmin]
-    serializer_class = SaleProductSerializer
-
-    def post(self, request, *args, **kwargs):
-
-        serializer = SaleProductSerializer(data=request.data)
-
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
 
 class SaleProductView(APIView):
     """Retrieves SaleProducts by sale_id"""
@@ -495,7 +389,7 @@ class ProductSaleView(APIView):
         return Response(serializer.data,status=status.HTTP_200_OK)
 
 
-class ListSaleProducts(generics.ListAPIView):
+class ListCreateSaleProducts(generics.ListCreateAPIView):
     """Lists all the SaleProducts"""
 
     queryset = SaleProduct.objects.all()
@@ -610,77 +504,46 @@ class ProductPriceHistoryDetailView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-class ProductPriceHistoryByProduct(APIView):
+class ProductPriceHistoryByProduct(generics.ListAPIView):
     """Returns all price-history for a product"""
 
     permission_classes = [IsAuthenticated, IsWarehouseOrAdmin]
+    serializer_class = ProductPriceHistorySerializer
 
-    def get(self, request, product_id):
-
-        product_price_history = ProductPriceHistory.objects.filter(product_id=product_id)
-
-        if not product_price_history:
-            return Response({"error": "ProductPriceHistory does not exist"}, status.HTTP_404_NOT_FOUND)
-
-        serializer = ProductPriceHistorySerializer(product_price_history, many=True)
-
-        return Response(serializer.data, status=status.HTTP_200_OK)
+    @override
+    def get_queryset(self):
+        product_id = self.kwargs['product_id']
+        qs = ProductPriceHistory.objects.filter(product_id=product_id)
+        return qs
 
 
-class ProductPriceHistoryByRecorder(APIView):
+class ProductPriceHistoryByRecorder(generics.ListAPIView):
     """Returns all price-history by recorder"""
 
     permission_classes = [IsAuthenticated, IsWarehouseOrAdmin]
+    serializer_class = ProductPriceHistorySerializer
 
-    def get(self, request, recorder_id):
-
-        product_price_history = ProductPriceHistory.objects.filter(recorder_id=recorder_id)
-
-        if not product_price_history:
-            return Response({"error": "ProductPriceHistory does not exist"}, status.HTTP_404_NOT_FOUND)
-
-        serializer = ProductPriceHistorySerializer(product_price_history, many=True)
-
-        return Response(serializer.data, status=status.HTTP_200_OK)
+    @override
+    def get_queryset(self):
+        recorder_id = self.kwargs['recorder_id']
+        qs = ProductPriceHistory.objects.filter(recorder_id=recorder_id)
+        return qs
 
 
-class ProductPriceHistoryByProductByRecorder(APIView):
+class ProductPriceHistoryByProductByRecorder(generics.ListAPIView):
     """Returns all price-history for a product by a recorder"""
 
     permission_classes = [IsAuthenticated, IsWarehouseOrAdmin]
+    serializer_class = ProductPriceHistorySerializer
 
-    def get(self, *args, **kwargs):
+    @override
+    def get_queryset(self):
+        product_id = self.kwargs['product_id']
+        recorder_id = self.kwargs['recorder_id']
+        qs = ProductPriceHistory.objects.filter(recorder_id=recorder_id, product_id=product_id)
+        return qs
 
-        product_id = kwargs.get("product_id")
-        recorder_id = kwargs.get("recorder_id")
-
-        product_price_history = ProductPriceHistory.objects.filter(product_id=product_id, recorder_id=recorder_id)
-
-        if not product_price_history:
-            return Response({"error": "ProductPriceHistory does not exist"}, status.HTTP_404_NOT_FOUND)
-
-        serializer = ProductPriceHistorySerializer(product_price_history, many=True)
-
-        return Response(serializer.data, status=status.HTTP_200_OK)
-
-
-class BackupWarehouseProductCreate(APIView):
-    """Handles creating new Backup Warehouse Products"""
-
-    permission_classes = [IsAuthenticated, IsWarehouseOrAdmin]
-    serializer_class = BackupWarehouseProductSerializer
-
-    def post(self, request, *args, **kwargs):
-        serializer = BackupWarehouseProductSerializer(data=request.data)
-
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
-class ListBackupWarehouseProducts(generics.ListAPIView):
+class ListCreateBackupWarehouseProducts(generics.ListCreateAPIView):
     """Handles listing all Backup Warehouse Products"""
 
     queryset = BackupWarehouseProduct.objects.all()
@@ -734,23 +597,8 @@ class BackupWarehouseProductDetailView(APIView):
         product.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-class UomGroupCreate(generics.CreateAPIView):
-    """Handles creating new UOM Groups"""
 
-    permission_classes = [IsAuthenticated, IsWarehouseOrAdmin]
-    serializer_class = UomGroupSerializer
-
-    def post(self, request, *args, **kwargs):
-        serializer = UomGroupSerializer(data=request.data)
-
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
-class ListUomGroups(generics.ListAPIView):
+class ListCreateUomGroups(generics.ListCreateAPIView):
     """Handles listing all UOM Groups"""
 
     queryset = UomGroup.objects.all()
