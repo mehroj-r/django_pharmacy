@@ -58,24 +58,10 @@ class Category(models.Model):
         return self.title
 
 
-class UomGroup(models.Model):
-    title = models.CharField(max_length=120)
-
-    def __str__(self):
-        return self.title
-
-
-class Uom(models.Model):
-    uomGroup = models.ForeignKey(UomGroup, on_delete=models.SET_NULL, null=True)
-    baseQuantity = models.DecimalField(decimal_places=2, max_digits=20)
-    quantity = models.DecimalField(decimal_places=2, max_digits=20)
-
-
 class Product(models.Model):
 
     title = models.CharField(max_length=120)
     photo = models.ImageField(null=True, blank=True)
-    uom = models.ForeignKey(Uom, on_delete=models.SET_NULL, null=True)
     recorder = models.ForeignKey(Staff, on_delete=models.SET_NULL, null=True)
     category = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True)
 
@@ -88,12 +74,17 @@ class SaleProduct(models.Model):
     class SaleProductStatusChoices(models.TextChoices):
         SOLD = "Sold"
         RETURNED = "Returned"
+        PENDING = "Pending"
 
-    sale = models.ForeignKey(Sale, on_delete=models.SET_NULL, null=True)
+    sale = models.ForeignKey(Sale, related_name='sale_products', on_delete=models.SET_NULL, null=True)
     product = models.ForeignKey(Product, on_delete=models.SET_NULL, null=True)
     quantity = models.DecimalField(decimal_places=2, max_digits=20)
-    unitPrice = models.DecimalField(decimal_places=2, max_digits=20)
+    retailPrice = models.DecimalField(decimal_places=2, max_digits=20)
     status = models.CharField(choices=SaleProductStatusChoices)
+
+    @property
+    def total(self):
+        return self.quantity * self.retailPrice
 
 
 class ProductPriceHistory(models.Model):
@@ -104,16 +95,25 @@ class ProductPriceHistory(models.Model):
     recorder = models.ForeignKey(Staff, on_delete=models.SET_NULL, null=True)
 
 
-class BackupWarehouseProduct(models.Model):
+class ProductBatch(models.Model):
 
-    product = models.ForeignKey(Product, on_delete=models.SET_NULL, null=True)
-    quantity = models.DecimalField(decimal_places=2, max_digits=20)
-    unitPrice = models.DecimalField(decimal_places=2, max_digits=20)
+    class ProductBatchSourceChoices(models.TextChoices):
+        PURCHASED = "Purchased"
+        RETURNED = "Returned"
 
-
-class WarehouseProduct(models.Model):
-
-    product = models.OneToOneField(Product, on_delete=models.SET_NULL, null=True, related_name="warehouse")
-    quantity = models.DecimalField(decimal_places=2, max_digits=20)
-    unitPrice = models.DecimalField(decimal_places=2, max_digits=20)
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name="batches")
     recorder = models.ForeignKey(Staff, on_delete=models.SET_NULL, null=True)
+
+    quantity = models.DecimalField(decimal_places=2, max_digits=20)
+    unitPrice = models.DecimalField(decimal_places=2, max_digits=20)
+    retailPrice = models.DecimalField(decimal_places=2, max_digits=20)
+    source = models.CharField(choices=ProductBatchSourceChoices, max_length=20, default=ProductBatchSourceChoices.PURCHASED)
+
+    arrival_date = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.warehouse_product.product.name} - {self.quantity} units @ ${self.unitPrice}"
+
+    @property
+    def profit_per_sale(self):
+            return self.retailPrice - self.unitPrice

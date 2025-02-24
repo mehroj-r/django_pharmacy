@@ -1,4 +1,6 @@
-from pharmacy_app.models import Staff, Product, Category, Uom, WarehouseProduct, Sale, SaleProduct, ProductPriceHistory, BackupWarehouseProduct, UomGroup
+from django.db.models import CharField
+
+from pharmacy_app.models import Staff, Product, Category, Sale, SaleProduct, ProductPriceHistory, ProductBatch
 from rest_framework import serializers
 
 
@@ -34,28 +36,14 @@ class CategorySerializer(serializers.ModelSerializer):
         model = Category
         fields = '__all__'
 
-class UomShortGroupSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = UomGroup
-        fields = ('id','title')
-
-class UomShortSerializer(serializers.ModelSerializer):
-
-    uomGroup = UomShortGroupSerializer(read_only=True)
-
-    class Meta:
-        model = Uom
-        fields = ('baseQuantity', 'quantity', 'uomGroup')
-
 class ProductSerializer(serializers.ModelSerializer):
 
     category = CategorySerializer(read_only=True)
     recorder = StaffShortSerializer(read_only=True)
-    uom = UomShortSerializer(read_only=True)
 
     class Meta:
         model = Product
-        fields= ('title', 'photo', 'category', 'recorder', 'uom')
+        fields= ('title', 'photo', 'category', 'recorder')
 
 class ProductListSerializer(serializers.ModelSerializer):
 
@@ -63,42 +51,49 @@ class ProductListSerializer(serializers.ModelSerializer):
         model = Product
         fields= ('id', 'title', 'category', 'recorder')
 
-
-class UomGroupSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = UomGroup
-        fields = ('id', 'title')
-
-
-class UomSerializer(serializers.ModelSerializer):
-
-    class Meta:
-        model = Uom
-        fields = ('id', 'baseQuantity', 'quantity', 'uomGroup')
-
-
-class WarehouseProductSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = WarehouseProduct
-        fields = '__all__'
-
-class SaleSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Sale
-        fields = '__all__'
-
 class SaleProductSerializer(serializers.ModelSerializer):
     class Meta:
         model = SaleProduct
         fields = '__all__'
+
+class ProductShortSerializer(serializers.ModelSerializer):
+
+    category = serializers.CharField(source='category.title', read_only=True)
+
+    class Meta:
+        model = Product
+        fields= ('title', 'category')
+
+class SaleProductExtendedSerializer(serializers.ModelSerializer):
+
+    title = serializers.CharField(source="product.title")
+    category = serializers.CharField(source="product.category.title")
+
+    class Meta:
+        model = SaleProduct
+        fields = ('title', 'category', 'status','quantity', 'retailPrice', 'total')
+
+class SaleExtendedSerializer(serializers.ModelSerializer):
+
+    sale_products = SaleProductExtendedSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = Sale
+        fields = ('code', 'totalAmount', 'status', 'recorder', 'payment_type', 'sale_products')
+
+class SaleSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Sale
+        fields = ('sale_id', 'code', 'totalAmount', 'status', 'recorder', 'payment_type')
 
 class ProductPriceHistorySerializer(serializers.ModelSerializer):
     class Meta:
         model = ProductPriceHistory
         fields = '__all__'
 
-class BackupWarehouseProductSerializer(serializers.ModelSerializer):
+class ProductBatchSerializer(serializers.ModelSerializer):
     class Meta:
-        model = BackupWarehouseProduct
+        model = ProductBatch
         fields = '__all__'
 

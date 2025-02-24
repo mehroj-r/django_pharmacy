@@ -1,40 +1,104 @@
 from django.db.models.signals import pre_save, post_save
 from django.dispatch import receiver
 from django.core.exceptions import ValidationError
-from .models import SaleProduct, ProductPriceHistory
+from .models import SaleProduct, ProductPriceHistory, ProductBatch, Sale
+from django.db.models import Sum
+from pharmacy_app.utils.thread_local import get_current_user
 
-@receiver(pre_save, sender=SaleProduct)
+@receiver(pre_save, sender=ProductBatch)
 def handle_price_change(sender, instance, **kwargs):
-    """Detect price change before saving"""
+    """Detect retail price change before saving"""
 
     if instance.pk:  # Only check updating, not creating
-        old_instance = sender.objects.get(pk=instance.pk)
 
-        if old_instance.unitPrice != instance.unitPrice:
+        if sender.retailPrice != instance.retailPrice:
+            recorder = get_current_user()
 
             ProductPriceHistory.objects.create(
                 product=instance.product,
-                oldPrice=old_instance.unitPrice,
-                newPrice=instance.unitPrice,
-                recorder=instance.sale.recorder
+                oldPrice=sender.retailPrice,
+                newPrice=instance.retailPrice,
+                recorder=recorder
             )
 
 @receiver(pre_save, sender=SaleProduct)
 def validate_stock(sender, instance, **kwargs):
     """Ensure enough stock before saving"""
-    warehouse = instance.product.warehouse
 
-    if instance.status == SaleProduct.SaleProductStatusChoices.SOLD and warehouse.quantity < instance.quantity:
-        raise ValidationError("The sale can't be processed. Stock is not enough")
+    stock = instance.product.batches.filter(retailPrice=instance.retailPrice).aggregate(total=Sum('quantity'))['total'] or 0
+
+    if instance.status == SaleProduct.SaleProductStatusChoices.SOLD and stock < instance.quantity:
+        raise ValidationError("The sale can't be processed. Stock is not enough for this product at this price.")
 
 @receiver(post_save, sender=SaleProduct)
-def update_warehouse_stock(sender, instance, created, **kwargs):
-    """Update warehouse stock only after successful save"""
-    warehouse = instance.product.warehouse
+def update_batch_stock(sender, instance, created, **kwargs):
+    """Update batch stock only after successful save"""
 
-    if instance.status == SaleProduct.SaleProductStatusChoices.RETURNED:
-        warehouse.quantity += instance.quantity  # Increment if returned
+    if not created: # If being updated, check if the status has changed
+
+        if sender.status == instance.status:
+            return
+
+
+    if instance.status == SaleProduct.SaleProductStatusChoices.RETURNED: # If returned save as a new batch
+
+        recorder = get_current_user()
+
+        ProductBatch.objects.create(
+
+            product=instance.product,
+            recorder=recorder,
+
+            quantity=instance.quantity,
+            unitPrice=instance.retailPrice,
+            retailPrice=instance.retailPrice,
+            source=ProductBatch.ProductBatchSourceChoices.RETURNED
+        )
+
+    elif instance.status == SaleProduct.SaleProductStatusChoices.SOLD: # If sold reduce the quantity from batch(es)
+
+        batches = instance.product.batches.filter(retailPrice=instance.retailPrice, quantity__gt=0).order_by('-arrival_date') # FIFO
+        remaining_qty = instance.quantity
+        updated_batches = []
+
+        for batch in batches: # Look through to reduce/empty batches
+            if remaining_qty == 0:
+                break
+
+            if batch.quantity >= remaining_qty:
+                batch.quantity -= remaining_qty
+                remaining_qty = 0
+            else:
+                remaining_qty -= batch.quantity
+                batch.quantity = 0
+
+            updated_batches.append(batch)
+
+        if updated_batches:
+            ProductBatch.objects.bulk_update(updated_batches, ['quantity'])
     else:
-        warehouse.quantity -= instance.quantity  # Decrement if sold
+        pass # Don't process anything while pending
 
-    warehouse.save()
+@receiver(post_save, sender=Sale)
+def handle_sale_finish(sender, instance, **kwargs):
+    """Marks every item as sold after"""
+
+    if sender.status == Sale.SaleStatusChoices.IN_PROGRESS and instance.status == Sale.SaleStatusChoices.CLOSED:
+
+        sale_products = instance.sale_products
+
+        for product in sale_products:
+            product.status = SaleProduct.SaleProductStatusChoices.SOLD
+            product.save()
+
+@receiver(post_save, sender=SaleProduct)
+def update_sale_total_amount(sender, instance, created, **kwargs):
+    """Updates totalAmount of sale after new SaleProduct is created"""
+
+    if not created:
+        return
+
+    sale = instance.sale
+    sale.totalAmount += instance.total
+    sale.save()
+
