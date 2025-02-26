@@ -1,3 +1,5 @@
+import uuid
+
 from django.db.models import CharField
 
 from pharmacy_app.models import Staff, Product, Category, Sale, SaleProduct, ProductPriceHistory, ProductBatch
@@ -51,6 +53,14 @@ class ProductListSerializer(serializers.ModelSerializer):
         model = Product
         fields= ('id', 'title', 'category', 'recorder')
 
+class ProductLiteSerializer(serializers.ModelSerializer):
+    category_name = serializers.CharField(source='category.title')
+    recorder = StaffShortSerializer()
+
+    class Meta:
+        model = Product
+        fields = ('id', 'title', 'category_name', 'recorder')
+
 class SaleProductSerializer(serializers.ModelSerializer):
     class Meta:
         model = SaleProduct
@@ -66,20 +76,23 @@ class ProductShortSerializer(serializers.ModelSerializer):
 
 class SaleProductExtendedSerializer(serializers.ModelSerializer):
 
-    title = serializers.CharField(source="product.title")
-    category = serializers.CharField(source="product.category.title")
+    product = serializers.CharField(source='product.title', read_only=True)
+    category = serializers.CharField(source='product.category.title', read_only=True)
 
     class Meta:
         model = SaleProduct
-        fields = ('title', 'category', 'status','quantity', 'retailPrice', 'total')
+        fields = (
+            'id', 'product', 'category', 'quantity', 'retailPrice', 'status', 'total'
+        )
 
 class SaleExtendedSerializer(serializers.ModelSerializer):
 
-    sale_products = SaleProductExtendedSerializer(many=True, read_only=True)
+    items = SaleProductExtendedSerializer(source='sale_products', read_only=True, many=True)
+    recorder = serializers.CharField(source='recorder.username', read_only=True)
 
     class Meta:
         model = Sale
-        fields = ('code', 'totalAmount', 'status', 'recorder', 'payment_type', 'sale_products')
+        fields = ('code', 'totalAmount', 'status', 'recorder', 'payment_type', 'items')
 
 class SaleSerializer(serializers.ModelSerializer):
 
@@ -97,3 +110,42 @@ class ProductBatchSerializer(serializers.ModelSerializer):
         model = ProductBatch
         fields = '__all__'
 
+class SaleProductCreateSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = SaleProduct
+        fields = ('id', 'quantity', 'retailPrice', 'status', 'product')
+
+
+class SaleCreateSerializer(serializers.ModelSerializer):
+    items = SaleProductCreateSerializer(many=True)
+
+    class Meta:
+        model = Sale
+        fields = ('payment_type', 'items')
+
+    def create(self, validated_data):
+        items_data = validated_data.pop('items')
+
+        # Generate a unique sale code
+        sale_code = f"SALE-{uuid.uuid4().hex[:4].upper()}"
+
+        # Create the sale
+        sale = Sale.objects.create(
+            code=sale_code,
+            recorder=self.context['request'].user,
+            totalAmount=0,
+            **validated_data
+        )
+
+        total = 0
+
+        # Create the sale products
+        for item_data in items_data:
+            SaleProduct.objects.create(sale=sale, **item_data)
+            total += item_data['retailPrice']*item_data['quantity']
+
+        sale.totalAmount = total
+        sale.save()
+
+        return sale

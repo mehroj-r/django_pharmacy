@@ -30,27 +30,6 @@ class Staff(AbstractUser):
         return self.first_name
 
 
-class Sale(models.Model):
-
-    class SaleStatusChoices(models.TextChoices):
-        IN_PROGRESS = "InProgress"
-        CLOSED = "Closed"
-
-    class PaymentTypeChoices(models.TextChoices):
-        CARD = "Card"
-        CASH = "Cash"
-
-    sale_id = models.AutoField(primary_key=True)
-    code = models.CharField(max_length=120)
-    recorder = models.ForeignKey(Staff, on_delete=models.SET_NULL, null=True)
-    totalAmount = models.DecimalField(max_digits=10, decimal_places=2)
-    status = models.CharField(choices=SaleStatusChoices, default=SaleStatusChoices.IN_PROGRESS)
-    payment_type = models.CharField(choices=PaymentTypeChoices, default=PaymentTypeChoices.CARD)
-
-    def __str__(self):
-        return self.code
-
-
 class Category(models.Model):
     title = models.CharField(max_length=120)
 
@@ -67,6 +46,27 @@ class Product(models.Model):
 
     def __str__(self):
         return self.title
+
+class Sale(models.Model):
+
+    class SaleStatusChoices(models.TextChoices):
+        IN_PROGRESS = "InProgress"
+        CLOSED = "Closed"
+
+    class PaymentTypeChoices(models.TextChoices):
+        CARD = "Card"
+        CASH = "Cash"
+
+    sale_id = models.AutoField(primary_key=True)
+    code = models.CharField(max_length=120)
+    recorder = models.ForeignKey(Staff, on_delete=models.SET_NULL, null=True)
+    totalAmount = models.DecimalField(max_digits=10, decimal_places=2)
+    status = models.CharField(choices=SaleStatusChoices, default=SaleStatusChoices.IN_PROGRESS)
+    payment_type = models.CharField(choices=PaymentTypeChoices, default=PaymentTypeChoices.CARD)
+    items = models.ManyToManyField(Product, through='SaleProduct', related_name='items')
+
+    def __str__(self):
+        return self.code
 
 
 class SaleProduct(models.Model):

@@ -18,10 +18,18 @@ from django.contrib import admin
 from django.urls import path, include
 from django.urls import include, path
 from debug_toolbar.toolbar import debug_toolbar_urls
+from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
+from rest_framework.schemas import get_schema_view
 
 from rest_framework_simplejwt.views import (
     TokenObtainPairView,
     TokenRefreshView,
+)
+
+schema_view = get_schema_view(
+    title="My API",
+    description="API for my Django project",
+    version="1.0.0"
 )
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -30,5 +38,8 @@ urlpatterns = [
     path('api-auth/', include('rest_framework.urls', namespace='rest_framework')),
     path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
-    path('silk/', include('silk.urls', namespace='silk'))
+    path('silk/', include('silk.urls', namespace='silk')),
+    path('openapi/', schema_view, name='openapi-schema'),
+    path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
+    path('api/schema/swagger-ui/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
 ] + debug_toolbar_urls()

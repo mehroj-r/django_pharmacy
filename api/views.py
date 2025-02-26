@@ -1,7 +1,4 @@
-
-from pprint import pprint
-from django.db import connection
-from django.db.migrations import serializer
+from django.db import models
 from django.utils.timezone import override
 from rest_framework import generics, status
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
@@ -9,13 +6,13 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from pharmacy_app.models import (
-    Staff, Product, Category, Sale, SaleProduct, ProductPriceHistory, ProductBatch
-)
+        Staff, Product, Category, Sale, SaleProduct, ProductPriceHistory, ProductBatch
+    )
 from pharmacy_app.serializers import (
     StaffSerializer, ProductSerializer, CategorySerializer, ProductBatchSerializer, \
     SaleSerializer, SaleProductSerializer, ProductPriceHistorySerializer, ProductListSerializer, \
-    SaleExtendedSerializer
-    )
+    SaleExtendedSerializer, SaleCreateSerializer
+)
 from pharmacy_app.permissions import IsOwnerOrAdmin, IsWarehouseOrAdmin
 
 
@@ -77,7 +74,7 @@ class StaffDetailView(APIView):
 
         staff.delete()
 
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        return Response({"success":"Staff removed"}, status=status.HTTP_204_NO_CONTENT)
 
 
 class ListCreateProducts(generics.ListCreateAPIView):
@@ -139,7 +136,7 @@ class ProductDetailView(APIView):
 
         product.delete()
 
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        return Response({"success: Product deleted"}, status=status.HTTP_204_NO_CONTENT)
 
 
 class ListCreateCategories(generics.ListCreateAPIView):
@@ -197,7 +194,7 @@ class CategoryDetailView(APIView):
             return Response({"error": "Category does not exist"}, status.HTTP_404_NOT_FOUND)
 
         category.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        return Response({"success: Category deleted"}, status=status.HTTP_204_NO_CONTENT)
 
 
 class ListCreateSales(generics.ListCreateAPIView):
@@ -207,6 +204,13 @@ class ListCreateSales(generics.ListCreateAPIView):
     serializer_class = SaleSerializer
     permission_classes = [IsAuthenticated, IsWarehouseOrAdmin]
 
+    def create(self, request, *args, **kwargs):
+        serializer = SaleCreateSerializer(data=request.data, context={'request': request})
+        if serializer.is_valid():
+            sale = serializer.save()
+            serializer2 = SaleSerializer(sale, many=False)
+            return Response(serializer2.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class SaleDetailView(APIView):
     """Handles retrieving and updating individual sales"""
@@ -216,14 +220,21 @@ class SaleDetailView(APIView):
 
     def get_sale_object(self, sale_id):
         try:
-            return Sale.objects.select_related().get(sale_id=sale_id)
+            return Sale.objects.prefetch_related('items').get(sale_id=sale_id)
         except Sale.DoesNotExist:
             return None
 
     # Retrieve a sale
     def get(self, request, sale_id):
 
-        sale = self.get_sale_object(sale_id)
+        sale = Sale.objects.select_related(
+            'recorder'  # For the recorder field in Sale
+        ).prefetch_related(
+            models.Prefetch(
+                'sale_products',
+                queryset=SaleProduct.objects.select_related('product__category', 'product__recorder')
+            )
+        ).get(pk=sale_id)
 
         if not sale:
             return Response({"error": "Sale does not exist"}, status.HTTP_404_NOT_FOUND)
@@ -331,7 +342,7 @@ class SaleProductDetailView(APIView):
             return Response({"error": "SaleProduct does not exist"}, status.HTTP_404_NOT_FOUND)
 
         sale_product.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        return Response({"success: SaleProduct deleted"}, status=status.HTTP_204_NO_CONTENT)
 
 class ListProductPriceHistory(generics.ListAPIView):
     """Retrieves the list oll price changes"""
@@ -376,17 +387,6 @@ class ProductPriceHistoryDetailView(APIView):
         serializer = ProductPriceHistorySerializer(product_price_history, data=request.data, many=False)
 
         return Response(serializer.data, status=status.HTTP_200_OK)
-
-    # Deletes a ProductPriceHistory
-    def delete(self, request, id):
-
-        product_price_history = self.get_product_price_history_object(id)
-
-        if not product_price_history:
-            return Response({"error": "ProductPriceHistory does not exist"}, status.HTTP_404_NOT_FOUND)
-
-        product_price_history.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class ProductPriceHistoryByProduct(generics.ListAPIView):

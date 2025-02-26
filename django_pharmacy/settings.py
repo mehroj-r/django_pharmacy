@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 import os.path
 from pathlib import Path
+from datetime import timedelta
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -41,6 +42,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'pharmacy_app',
     "debug_toolbar",
+    'drf_spectacular',
     'silk',
     'api',
 ]
@@ -143,11 +145,26 @@ REST_FRAMEWORK = {
     ],
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.DjangoModelPermissionsOrAnonReadOnly'
-    ]
+    ],
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
 }
 
+# Custom User modal specification
 AUTH_USER_MODEL = 'pharmacy_app.Staff'
 
 INTERNAL_IPS = [
     "127.0.0.1",
 ]
+
+# Extend the validity period of access token
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(days=10),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=10),
+}
+
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'Pharmacy API',
+    'DESCRIPTION': 'Pharmacy App API',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+}
