@@ -21,15 +21,6 @@ def handle_price_change(sender, instance, **kwargs):
                 recorder=recorder
             )
 
-@receiver(pre_save, sender=SaleProduct)
-def validate_stock(sender, instance, **kwargs):
-    """Ensure enough stock before saving"""
-
-    stock = instance.product.batches.filter(retailPrice=instance.retailPrice).aggregate(total=Sum('quantity'))['total'] or 0
-
-    if instance.status == SaleProduct.SaleProductStatusChoices.SOLD and stock < instance.quantity:
-        raise ValidationError("The sale can't be processed. Stock is not enough for this product at this price.")
-
 @receiver(post_save, sender=SaleProduct)
 def update_batch_stock(sender, instance, created, **kwargs):
     """Update batch stock only after successful save"""
@@ -90,15 +81,4 @@ def handle_sale_finish(sender, instance, **kwargs):
         for product in sale_products:
             product.status = SaleProduct.SaleProductStatusChoices.SOLD
             product.save()
-
-@receiver(post_save, sender=SaleProduct)
-def update_sale_total_amount(sender, instance, created, **kwargs):
-    """Updates totalAmount of sale after new SaleProduct is created"""
-
-    if not created:
-        return
-
-    sale = instance.sale
-    sale.totalAmount += instance.total
-    sale.save()
 

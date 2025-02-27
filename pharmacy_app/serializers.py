@@ -1,6 +1,6 @@
 import uuid
 
-from django.db.models import CharField
+from django.db.models import CharField, Sum
 
 from pharmacy_app.models import Staff, Product, Category, Sale, SaleProduct, ProductPriceHistory, ProductBatch
 from rest_framework import serializers
@@ -124,6 +124,33 @@ class SaleCreateSerializer(serializers.ModelSerializer):
         model = Sale
         fields = ('payment_type', 'items')
 
+    def validate(self, attrs):
+
+        # Validate each item has sufficient stock
+        items_data = attrs.get('items', [])
+
+        for item_data in items_data:
+
+            # Skip validation if item is not marked as SOLD
+            if item_data.get('status') == SaleProduct.SaleProductStatusChoices.RETURNED:
+                continue
+
+            # Extract details
+            product = item_data.get('product')
+            quantity = item_data.get('quantity')
+            retail_price = item_data.get('retailPrice')
+
+            # Check stock
+            stock = product.batches.filter(retailPrice=retail_price).aggregate(
+                total=Sum('quantity'))['total'] or 0
+
+            if stock < quantity:
+                raise serializers.ValidationError({
+                    "items": f"The sale can't be processed. Stock is not enough for product {product} at price ${retail_price}."
+                })
+
+        return attrs
+
     def create(self, validated_data):
         items_data = validated_data.pop('items')
 
@@ -143,7 +170,7 @@ class SaleCreateSerializer(serializers.ModelSerializer):
         # Create the sale products
         for item_data in items_data:
             SaleProduct.objects.create(sale=sale, **item_data)
-            total += item_data['retailPrice']*item_data['quantity']
+            total += item_data['retailPrice'] * item_data['quantity']
 
         sale.totalAmount = total
         sale.save()

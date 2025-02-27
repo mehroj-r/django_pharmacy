@@ -112,7 +112,7 @@ class ProductBatch(models.Model):
     arrival_date = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"{self.warehouse_product.product.name} - {self.quantity} units @ ${self.unitPrice}"
+        return f"{self.product.title} - {self.quantity} units @ ${self.unitPrice}"
 
     @property
     def profit_per_sale(self):
